@@ -32,7 +32,6 @@ jobs:
 
           cp -a "$tmp/minhaj/." .
 
-          # Remove files confirmed unused during the review.
           rm -f \
             css/K \
             css/student-filters.css \
@@ -41,7 +40,6 @@ jobs:
             js/drive-sources-runtime-fix.js \
             assets/contributor-faal-alkhair.svg
 
-          # Remove stale references to deleted runtime-fix files.
           grep -RIl --exclude-dir=.git \
             -e 'js/admin-menu-fix.js' \
             -e 'js/drive-dynamic-classifier.js' \
@@ -119,4 +117,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'feat: import reviewed Minhaj source [minhaj-import]' || exit 0
-          git push origin HEAD:minhaj-migration
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:minhaj-migration
