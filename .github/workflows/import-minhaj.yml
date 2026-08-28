@@ -1,3 +1,4 @@
+# Reviewed Minhaj import workflow. Keep this job idempotent: it rebuilds the target tree from Minhaj and removes legacy QR files.
 name: Import reviewed Minhaj
 
 on:
@@ -24,8 +25,6 @@ jobs:
           tmp="$(mktemp -d)"
           git clone --depth 1 https://github.com/pls455/Minhaj.git "$tmp/minhaj"
 
-          # A merge can land while the import job is running. Refresh the remote
-          # ref immediately before building the import commit so the push stays fast-forward.
           git fetch origin "$GITHUB_REF_NAME"
           git reset --hard "origin/$GITHUB_REF_NAME"
 
