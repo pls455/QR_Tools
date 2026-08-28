@@ -1,1 +1,1 @@
-Temporary trigger. The import workflow removes this file when rebuilding the project tree.
+Trigger clean Minhaj rebuild.
