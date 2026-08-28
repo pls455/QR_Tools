@@ -1,125 +1,72 @@
-name: Import reviewed Minhaj
+name: Rebuild QR_Tools from Minhaj
 
 on:
+  workflow_dispatch:
   push:
-    branches: [minhaj-migration, main]
+    branches: [migration-trigger-2]
 
 permissions:
   contents: write
 
 jobs:
-  import:
-    if: ${{ !contains(github.event.head_commit.message, '[minhaj-import]') }}
+  rebuild:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout target
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Import Minhaj source tree
+      - name: Build clean snapshot
         shell: bash
         run: |
           set -euo pipefail
           tmp="$(mktemp -d)"
           git clone --depth 1 https://github.com/pls455/Minhaj.git "$tmp/minhaj"
 
-          # A merge can land while the import job is running. Refresh the remote
-          # ref immediately before building the import commit so the push stays fast-forward.
-          git fetch origin "$GITHUB_REF_NAME"
-          git reset --hard "origin/$GITHUB_REF_NAME"
-
-          find . -mindepth 1 -maxdepth 1 \
-            ! -name .git \
-            ! -name .github \
-            ! -name MIGRATION.md \
-            -exec rm -rf {} +
-
+          git checkout --orphan rebuild
+          git rm -rf . >/dev/null 2>&1 || true
           cp -a "$tmp/minhaj/." .
 
-          rm -f \
-            css/K \
-            css/student-filters.css \
-            js/admin-menu-fix.js \
-            js/drive-dynamic-classifier.js \
-            js/drive-sources-runtime-fix.js \
-            assets/contributor-faal-alkhair.svg
-
-          grep -RIl --exclude-dir=.git \
-            -e 'js/admin-menu-fix.js' \
-            -e 'js/drive-dynamic-classifier.js' \
-            -e 'js/drive-sources-runtime-fix.js' \
-            -e 'css/student-filters.css' \
-            -e 'assets/contributor-faal-alkhair.svg' . | while read -r file; do
-              sed -i \
-                -e '/js\/admin-menu-fix\.js/d' \
-                -e '/js\/drive-dynamic-classifier\.js/d' \
-                -e '/js\/drive-sources-runtime-fix\.js/d' \
-                -e '/css\/student-filters\.css/d' \
-                -e '/assets\/contributor-faal-alkhair\.svg/d' "$file"
-          done
+          rm -f css/K css/student-filters.css js/admin-menu-fix.js js/drive-dynamic-classifier.js js/drive-sources-runtime-fix.js assets/contributor-faal-alkhair.svg
 
           cat > .gitignore <<'EOF'
-          .DS_Store
-          Thumbs.db
-          node_modules/
-          .npm/
-          .env
-          .env.*
-          !.env.example
-          .wrangler/
-          .firebase/
-          coverage/
-          dist/
-          EOF
+.DS_Store
+Thumbs.db
+node_modules/
+.npm/
+.env
+.env.*
+!.env.example
+.wrangler/
+.firebase/
+coverage/
+dist/
+EOF
 
           cat > package.json <<'EOF'
-          {
-            "name": "minhaj",
-            "private": true,
-            "version": "6.0.0",
-            "description": "Minhaj educational platform",
-            "scripts": { "check": "node scripts/validate.mjs" },
-            "engines": { "node": ">=20" }
-          }
-          EOF
+{"name":"minhaj","private":true,"version":"6.0.0","scripts":{"check":"node scripts/validate.mjs"},"engines":{"node":">=20"}}
+EOF
 
           mkdir -p scripts
           cat > scripts/validate.mjs <<'EOF'
-          import { readdir, readFile } from 'node:fs/promises';
-          import { existsSync } from 'node:fs';
-          import { join, extname } from 'node:path';
-          import { spawnSync } from 'node:child_process';
-
-          const root = new URL('..', import.meta.url).pathname;
-          const ignored = new Set(['node_modules', '.git', 'dist', 'coverage']);
-          const files = [];
-          async function walk(dir) {
-            for (const entry of await readdir(dir, { withFileTypes: true })) {
-              if (ignored.has(entry.name)) continue;
-              const full = join(dir, entry.name);
-              if (entry.isDirectory()) await walk(full); else files.push(full);
-            }
-          }
-          await walk(root);
-          let failed = false;
-          for (const file of files.filter(f => ['.js','.mjs'].includes(extname(f)))) {
-            const r = spawnSync(process.execPath, ['--check', file], {encoding:'utf8'});
-            if (r.status !== 0) { failed = true; console.error(r.stderr || r.stdout || file); }
-          }
-          const textFiles = files.filter(f => ['.html','.js','.css','.json','.toml','.rules','.gs'].includes(extname(f)));
-          const combined = (await Promise.all(textFiles.map(f => readFile(f,'utf8').catch(()=>'')))).join('\n');
-          const missing = ['js/admin-menu-fix.js','js/drive-dynamic-classifier.js','js/drive-sources-runtime-fix.js','css/student-filters.css','assets/contributor-faal-alkhair.svg']
-            .filter(ref => combined.includes(ref) && !existsSync(join(root, ref)));
-          if (missing.length) { failed = true; console.error('Dead references:', missing.join(', ')); }
-          if (failed) process.exit(1);
-          console.log(`Validation passed: ${files.length} files scanned.`);
-          EOF
+import { readdir, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, extname } from 'node:path';
+import { spawnSync } from 'node:child_process';
+const root=new URL('..',import.meta.url).pathname;
+const ignored=new Set(['node_modules','.git','dist','coverage']); const files=[];
+async function walk(dir){for(const e of await readdir(dir,{withFileTypes:true})){if(ignored.has(e.name))continue;const f=join(dir,e.name);if(e.isDirectory())await walk(f);else files.push(f)}}
+await walk(root); let failed=false;
+for(const f of files.filter(x=>['.js','.mjs'].includes(extname(x)))){const r=spawnSync(process.execPath,['--check',f],{encoding:'utf8'});if(r.status!==0){failed=true;console.error(r.stderr||r.stdout||f)}}
+const refs=['js/admin-menu-fix.js','js/drive-dynamic-classifier.js','js/drive-sources-runtime-fix.js','css/student-filters.css','assets/contributor-faal-alkhair.svg'];
+const texts=await Promise.all(files.filter(f=>['.html','.js','.css','.json','.toml','.rules','.gs'].includes(extname(f))).map(f=>readFile(f,'utf8').catch(()=>'')));
+const all=texts.join('\n'); const missing=refs.filter(r=>all.includes(r)&&!existsSync(join(root,r))); if(missing.length){failed=true;console.error('Dead references:',missing.join(', '))}
+if(failed)process.exit(1); console.log(`Validation passed: ${files.length} files scanned.`);
+EOF
 
           npm run check
-
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'feat: import reviewed Minhaj source [minhaj-import]' || exit 0
-          git push "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          git commit -m 'feat: rebuild QR_Tools from reviewed Minhaj snapshot'
+          git push --force origin HEAD:main
