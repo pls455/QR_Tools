@@ -1,1 +1,1 @@
-Trigger clean Minhaj rebuild - second attempt.
+Run clean rebuild now.
