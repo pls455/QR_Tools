@@ -1,4 +1,4 @@
-# Reviewed Minhaj import workflow. Keep this job idempotent: it rebuilds the target tree from Minhaj and removes legacy QR files.
+# Reviewed Minhaj import workflow. This intentionally replaces the target tree with the reviewed Minhaj tree.
 name: Import reviewed Minhaj
 
 on:
@@ -24,7 +24,6 @@ jobs:
           set -euo pipefail
           tmp="$(mktemp -d)"
           git clone --depth 1 https://github.com/pls455/Minhaj.git "$tmp/minhaj"
-
           git fetch origin "$GITHUB_REF_NAME"
           git reset --hard "origin/$GITHUB_REF_NAME"
 
@@ -121,4 +120,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'feat: import reviewed Minhaj source [minhaj-import]' || exit 0
-          git push "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          git push --force "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
